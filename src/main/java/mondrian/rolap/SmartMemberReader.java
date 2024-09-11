@@ -101,9 +101,9 @@ public class SmartMemberReader implements MemberReader {
         return source.getMemberByKey(level, keyValues);
     }
 
-    public int countMemberChildren(Member member, List<RolapMember> children, MemberChildrenConstraint constraint) {
+    /*public int countMemberChildren(Member member, List<RolapMember> children, MemberChildrenConstraint constraint) {
         return source.countMemberChildren((RolapMember) member, children, constraint);
-    }
+    }*/
 
     // implement MemberReader
     public List<RolapMember> getMembers() {
@@ -151,7 +151,8 @@ public class SmartMemberReader implements MemberReader {
             members =
                 source.getMembersInLevel(
                     level, constraint);
-            cacheHelper.putLevelMembersInCache(level, constraint, members);
+            // cacheHelper.putLevelMembersInCache(level, constraint, members);
+            cacheHelper.putChildren(level, constraint, members);
             return members;
         }
     }

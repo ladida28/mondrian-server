@@ -31,8 +31,8 @@ java {
 ext.saikuReleaseTag = '3.16m'
 
 // Mondrian Version
-ext.mondrianReleaseTag = '9.6.0.0' //'9.4.0.0'
-ext.mondrianVersion = '9.6.0.0-SNAPSHOT'//'9.4.0.0-SNAPSHOT'
+ext.mondrianReleaseTag = '9.4.0.0'
+ext.mondrianVersion = '9.4.0.0-SNAPSHOT'
 
 // Spring Versiion
 ext.springFrameworkVersion =  '4.3.30.RELEASE' //5.3.31' //'4.3.30.RELEASE' 4.1.6.RELEASE
@@ -294,6 +294,15 @@ war {
     from 'tmp/main/webapp'
 
     outputs.upToDateWhen { false }
+}
+
+task copyArtifact2Test(dependsOn:[war],type: Copy) {
+  from file('mondrian-server.war')
+  into 'C:/Users/Martin/Documents/02_Software/01_Repos/WI2/mondriansaikuforwi2fortest'
+}
+task copyArtifact2WI2Rep(dependsOn:[copyArtifact2Test],type: Copy) {
+  from file('mondrian-server.war')
+  into 'C:/Users/Martin/Documents/02_Software/01_Repos/WI2/mondriansaikuforwi2'
 }
 
 
