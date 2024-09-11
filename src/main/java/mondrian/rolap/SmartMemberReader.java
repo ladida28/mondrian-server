@@ -1,11 +1,4 @@
-/**
- * This is a patched version of SmartMemberReader to remove the ordering bug
- * that sometimes occurs with date dimensions. If mondrian is updated, this
- * class must be updated as well. See [PATCH START]
- */
-
 /*
-
 // This software is subject to the terms of the Eclipse Public License v1.0
 // Agreement, available at the following URL:
 // http://www.eclipse.org/legal/epl-v10.html.
@@ -50,7 +43,6 @@ import java.util.*;
  * @author jhyde
  * @since 21 December, 2001
  */
-@SuppressWarnings( { "rawtypes", "deprecation", "unused" } )
 public class SmartMemberReader implements MemberReader {
     private final SqlConstraintFactory sqlConstraintFactory =
         SqlConstraintFactory.instance();
@@ -79,7 +71,6 @@ public class SmartMemberReader implements MemberReader {
         }
     }
     // implement MemberReader
-    @Override
     public RolapHierarchy getHierarchy() {
         return source.getHierarchy();
     }
@@ -89,24 +80,20 @@ public class SmartMemberReader implements MemberReader {
     }
 
     // implement MemberSource
-    @Override
     public boolean setCache(MemberCache cache) {
         // we do not support cache writeback -- we must be masters of our
         // own cache
         return false;
     }
 
-    @Override
     public RolapMember substitute(RolapMember member) {
         return member;
     }
 
-    @Override
     public RolapMember desubstitute(RolapMember member) {
         return member;
     }
 
-    @Override
     public RolapMember getMemberByKey(
         RolapLevel level, List<Comparable> keyValues)
     {
@@ -114,8 +101,11 @@ public class SmartMemberReader implements MemberReader {
         return source.getMemberByKey(level, keyValues);
     }
 
+    public int countMemberChildren(Member member, List<RolapMember> children, MemberChildrenConstraint constraint) {
+        return source.countMemberChildren((RolapMember) member, children, constraint);
+    }
+
     // implement MemberReader
-    @Override
     public List<RolapMember> getMembers() {
         List<RolapMember> v = new ConcatenableList<RolapMember>();
         RolapLevel[] levels = (RolapLevel[]) getHierarchy().getLevels();
@@ -127,7 +117,6 @@ public class SmartMemberReader implements MemberReader {
         return v;
     }
 
-    @Override
     public List<RolapMember> getRootMembers() {
         if (rootMembers == null) {
             rootMembers = source.getRootMembers();
@@ -135,7 +124,6 @@ public class SmartMemberReader implements MemberReader {
         return rootMembers;
     }
 
-    @Override
     public List<RolapMember> getMembersInLevel(
         RolapLevel level)
     {
@@ -148,7 +136,6 @@ public class SmartMemberReader implements MemberReader {
         cacheHelper.checkCacheStatus();
     }
 
-    @Override
     public List<RolapMember> getMembersInLevel(
         RolapLevel level, TupleConstraint constraint)
     {
@@ -169,14 +156,12 @@ public class SmartMemberReader implements MemberReader {
         }
     }
 
-    @Override
     public int getLevelMemberCount(RolapLevel level) {
         // No need to cache the result: the caller saves the result by calling
         // RolapLevel.setApproxRowCount
         return source.getLevelMemberCount(level);
     }
 
-    @Override
     public void getMemberChildren(
         RolapMember parentMember,
         List<RolapMember> children)
@@ -186,7 +171,6 @@ public class SmartMemberReader implements MemberReader {
         getMemberChildren(parentMember, children, constraint);
     }
 
-    @Override
     public Map<? extends Member, Access> getMemberChildren(
         RolapMember parentMember,
         List<RolapMember> children,
@@ -197,7 +181,6 @@ public class SmartMemberReader implements MemberReader {
         return getMemberChildren(parentMembers, children, constraint);
     }
 
-    @Override
     public void getMemberChildren(
         List<RolapMember> parentMembers,
         List<RolapMember> children)
@@ -207,20 +190,19 @@ public class SmartMemberReader implements MemberReader {
         getMemberChildren(parentMembers, children, constraint);
     }
 
-    @Override
     public Map<? extends Member, Access> getMemberChildren(
-            List<RolapMember> parentMembers,
-            List<RolapMember> children,
-            MemberChildrenConstraint constraint)
+        List<RolapMember> parentMembers,
+        List<RolapMember> children,
+        MemberChildrenConstraint constraint)
     {
         synchronized (cacheHelper) {
             checkCacheStatus();
-// [PATCH START]
+			
+			// [PATCH START]
             List<RolapMember> missed = new ArrayList<RolapMember>();
             Map<RolapMember, List<RolapMember>> childMap = new HashMap<>();
             for (RolapMember parentMember : parentMembers) {
-                List<RolapMember> list =
-                    cacheHelper.getChildrenFromCache(parentMember, constraint);
+                List<RolapMember> list = cacheHelper.getChildrenFromCache(parentMember, constraint);
                 if (list == null) {
                     // the null member has no children
                     if (!parentMember.isNull()) {
@@ -236,30 +218,28 @@ public class SmartMemberReader implements MemberReader {
                 readMemberChildren(missed, missedChildren, constraint);
 
                 // index the children by parent
-                for ( RolapMember child : missedChildren ) {
-                    List<RolapMember> siblings = childMap.get( child.getParentMember() );
-                    if ( siblings == null ) {
+                for (RolapMember child : missedChildren) {
+                    List<RolapMember> siblings = childMap.get(child.getParentMember());
+                    if (siblings == null) {
                         siblings = new ArrayList<>();
-                        childMap.put( child.getParentMember(), siblings );
+                        childMap.put(child.getParentMember(), siblings);
                     }
-                    siblings.add( child );
+                    siblings.add(child);
                 }
             }
 
             // return all the children in the order of their parents
-            for ( RolapMember parentMember : parentMembers ) {
-                List<RolapMember> memberChildren = childMap.get( parentMember );
-                if ( memberChildren != null ) {
-                    children.addAll( memberChildren );
+            for (RolapMember parentMember : parentMembers) {
+                List<RolapMember> memberChildren = childMap.get(parentMember);
+                if (memberChildren != null) {
+                    children.addAll(memberChildren);
                 }
             }
-
-// [PATCH END]
+		// [PATCH END]	
         }
         return Util.toNullValuesMap(children);
     }
 
-    @Override
     public RolapMember lookupMember(
         List<Id.Segment> uniqueNameParts,
         boolean failIfNotFound)
@@ -298,7 +278,7 @@ public class SmartMemberReader implements MemberReader {
         Map<RolapMember, List<RolapMember>> tempMap =
             new HashMap<RolapMember, List<RolapMember>>();
         for (RolapMember member1 : members) {
-            tempMap.put(member1, Collections.emptyList());
+            tempMap.put(member1, Collections.EMPTY_LIST);
         }
         for (final RolapMember child : children) {
             // todo: We could optimize here. If members.length is small, it's
@@ -318,13 +298,11 @@ public class SmartMemberReader implements MemberReader {
                 // let's ignore it.
                 continue;
             } else if (list == Collections.EMPTY_LIST) {
-            	list = new ArrayList<RolapMember>();
+                list = new ArrayList<RolapMember>();
                 tempMap.put(parentMember, list);
             }
-            list.add(child);
-            result.add(child);
-            //((List)list).add(child);
-            //((List)result).add(child);
+            ((List)list).add(child);
+            ((List)result).add(child);
         }
         synchronized (cacheHelper) {
             for (Map.Entry<RolapMember, List<RolapMember>> entry
@@ -365,7 +343,6 @@ public class SmartMemberReader implements MemberReader {
         return true;
     }
 
-    @Override
     public RolapMember getLeadMember(RolapMember member, int n) {
         // uncertain if this method needs to be synchronized
         synchronized (cacheHelper) {
@@ -399,7 +376,6 @@ public class SmartMemberReader implements MemberReader {
         }
     }
 
-    @Override
     public void getMemberRange(
         RolapLevel level,
         RolapMember startMember,
@@ -430,12 +406,10 @@ public class SmartMemberReader implements MemberReader {
             + startMember + ", end=" + endMember);
     }
 
-    @Override
     public int getMemberCount() {
         return source.getMemberCount();
     }
 
-    @Override
     public int compare(
         RolapMember m1,
         RolapMember m2,
@@ -594,12 +568,10 @@ public class SmartMemberReader implements MemberReader {
         }
     }
 
-    @Override
     public MemberBuilder getMemberBuilder() {
         return source.getMemberBuilder();
     }
 
-    @Override
     public RolapMember getDefaultMember() {
         RolapMember defaultMember =
             (RolapMember) getHierarchy().getDefaultMember();
@@ -609,7 +581,6 @@ public class SmartMemberReader implements MemberReader {
         return getRootMembers().get(0);
     }
 
-    @Override
     public RolapMember getMemberParent(RolapMember member) {
         // This method deals with ragged hierarchies but not access-controlled
         // hierarchies - assume these have RestrictedMemberReader possibly
